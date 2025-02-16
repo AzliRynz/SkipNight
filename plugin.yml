@@ -1,0 +1,20 @@
+name: SkipNight
+main: AzliRynz\SkipNight\SkipNight
+version: 1.0.0
+api: 5.0.0
+author: AzliRynz
+description: A vote-based night skipping system for PocketMine-MP
+
+commands:
+  agree:
+    description: Agree to skip the night
+    usage: "/agree"
+    permission: skipnight.vote
+  disagree:
+    description: Disagree to skip the night
+    usage: "/disagree"
+    permission: skipnight.vote
+
+permissions:
+  skipnight.vote:
+    default: true
