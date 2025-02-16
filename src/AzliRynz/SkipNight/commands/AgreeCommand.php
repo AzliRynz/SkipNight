@@ -14,6 +14,8 @@ use pocketmine\plugin\PluginOwnedTrait;
 class AgreeCommand extends Command implements PluginOwned {
     use PluginOwnedTrait;
 
+    private SkipNight $plugin;
+
     public function __construct(SkipNight $plugin) {
         parent::__construct("agree", "Agree to skip the night", "/agree");
         $this->plugin = $plugin;
