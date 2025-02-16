@@ -4,36 +4,48 @@ declare(strict_types=1);
 
 namespace AzliRynz\SkipNight;
 
+use pocketmine\event\Listener;
 use pocketmine\plugin\PluginBase;
-use pocketmine\scheduler\ClosureTask;
-use pocketmine\world\World;
+use pocketmine\event\player\PlayerJoinEvent;
+use pocketmine\event\server\DataPacketSendEvent;
+use pocketmine\event\world\TimeChangeEvent;
+use pocketmine\command\Command;
+use pocketmine\command\CommandSender;
+use pocketmine\player\Player;
+use pocketmine\Server;
 
-class SkipNight extends PluginBase {
+class SkipNight extends PluginBase implements Listener {
 
     private VoteManager $voteManager;
 
     public function onEnable(): void {
+        $this->getServer()->getPluginManager()->registerEvents($this, $this);
         $this->voteManager = new VoteManager($this);
-
-        $this->getScheduler()->scheduleRepeatingTask(new ClosureTask(function (): void {
-            $this->checkNightTime();
-        }), 100);
     }
 
-    private function checkNightTime(): void {
-        foreach ($this->getServer()->getWorldManager()->getWorlds() as $world) {
-            if ($this->isNightTime($world) && !$this->voteManager->isVoting()) {
-                $this->voteManager->startVote($world);
-            }
+    public function onTimeChange(TimeChangeEvent $event): void {
+        $world = $event->getWorld();
+        if ($world->getTime() == 13000) {
+            $this->voteManager->startVote();
         }
     }
 
-    private function isNightTime(World $world): bool {
-        $time = $world->getTime();
-        return $time >= 12500 && $time < 23000; // Night in Minecraft
-    }
+    public function onCommand(CommandSender $sender, Command $command, string $label, array $args): bool {
+        if (!$sender instanceof Player) {
+            $sender->sendMessage("§cThis command can only be used in-game!");
+            return true;
+        }
 
-    public function getVoteManager(): VoteManager {
-        return $this->voteManager;
+        switch ($command->getName()) {
+            case "agree":
+                $this->voteManager->vote($sender, true);
+                return true;
+
+            case "disagree":
+                $this->voteManager->vote($sender, false);
+                return true;
+        }
+
+        return false;
     }
 }
