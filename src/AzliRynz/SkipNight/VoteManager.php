@@ -20,6 +20,7 @@ class VoteManager implements PluginOwned {
     private array $votedPlayers = [];
     private ?World $world = null;
     private BossBar $bossBar;
+    private SkipNight $plugin;
 
     public function __construct(SkipNight $plugin) {
         $this->plugin = $plugin;
