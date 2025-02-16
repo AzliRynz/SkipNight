@@ -8,11 +8,9 @@ description: A vote-based night skipping system for PocketMine-MP
 commands:
   agree:
     description: Agree to skip the night
-    usage: "/agree"
     permission: skipnight.vote
   disagree:
     description: Disagree to skip the night
-    usage: "/disagree"
     permission: skipnight.vote
 
 permissions:
