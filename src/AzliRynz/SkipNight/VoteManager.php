@@ -4,47 +4,54 @@ declare(strict_types=1);
 
 namespace AzliRynz\SkipNight;
 
-use pocketmine\player\Player;
-use pocketmine\Server;
-use pocketmine\scheduler\ClosureTask;
 use pocketmine\world\World;
+use pocketmine\scheduler\Task;
+use pocketmine\Server;
+use pocketmine\player\Player;
+use pocketmine\plugin\PluginOwned;
+use pocketmine\plugin\PluginOwnedTrait;
 
 class VoteManager {
 
-    private SkipNight $plugin;
-    private BossBar $bossBar;
-    private array $votedPlayers = [];
+    private bool $isVoting = false;
     private int $agreeVotes = 0;
     private int $disagreeVotes = 0;
-    private bool $isVoting = false;
+    private array $votedPlayers = [];
+    private ?World $world = null;
+    private BossBar $bossBar;
+    private SkipNight $plugin;
 
     public function __construct(SkipNight $plugin) {
         $this->plugin = $plugin;
-        $this->bossBar = new BossBar("Night Skip Vote", 1.0);
+        $this->bossBar = new BossBar("Vote to skip the night!");
     }
 
-    public function startVote(): void {
-        if ($this->isVoting) return;
+    public function startVote(World $world): void {
         $this->isVoting = true;
-
         $this->agreeVotes = 0;
         $this->disagreeVotes = 0;
         $this->votedPlayers = [];
+        $this->world = $world;
+
+        Server::getInstance()->broadcastMessage("§eNight has fallen! Use §b/agree §eor §c/disagree §ewithin 2 minutes!");
 
         foreach (Server::getInstance()->getOnlinePlayers() as $player) {
             $this->bossBar->send($player);
         }
 
-        Server::getInstance()->broadcastMessage("§eThe night has begun! Vote with §a/agree §for §c/disagree");
-
-        $this->plugin->getScheduler()->scheduleDelayedTask(new ClosureTask(function (): void {
-            $this->endVote();
-        }), 2400);
+        $this->plugin->getScheduler()->scheduleDelayedTask(new class($this) extends Task {
+            private VoteManager $voteManager;
+            public function __construct(VoteManager $voteManager) {
+                $this->voteManager = $voteManager;
+            }
+            public function onRun(): void {
+                $this->voteManager->endVote();
+            }
+        }, 2400);
     }
 
     public function vote(Player $player, bool $agree): void {
         if (isset($this->votedPlayers[$player->getName()])) {
-            $player->sendMessage("§cYou have already voted!");
             return;
         }
 
@@ -52,32 +59,29 @@ class VoteManager {
 
         if ($agree) {
             $this->agreeVotes++;
-            Server::getInstance()->broadcastMessage("§e" . $player->getName() . " chose to skip the night!");
         } else {
             $this->disagreeVotes++;
-            Server::getInstance()->broadcastMessage("§e" . $player->getName() . " wants to keep the night!");
         }
 
         $this->bossBar->remove($player);
-        $this->bossBar->updateProgress($this->agreeVotes / max(1, count(Server::getInstance()->getOnlinePlayers())));
-        $this->bossBar->updateTitle("Votes: §a{$this->agreeVotes} §f/ §c{$this->disagreeVotes}");
+        Server::getInstance()->broadcastMessage("§eVote: §a{$this->agreeVotes} agreed §f| §c{$this->disagreeVotes} disagreed");
     }
 
-    private function endVote(): void {
-        $this->isVoting = false;
-        $players = count(Server::getInstance()->getOnlinePlayers());
-        if ($this->agreeVotes > ($players / 2)) {
-            Server::getInstance()->broadcastMessage("§aMajority agreed! Skipping the night...");
-            foreach (Server::getInstance()->getWorldManager()->getWorlds() as $world) {
-                $world->setTime(World::TIME_DAY);
-            }
+    public function endVote(): void {
+        $totalPlayers = count(Server::getInstance()->getOnlinePlayers());
+        $majorityNeeded = (int) ceil($totalPlayers / 2);
+
+        if ($this->agreeVotes >= $majorityNeeded) {
+            Server::getInstance()->broadcastMessage("§aMajority agreed! Night skipped.");
+            $this->world?->setTime(0);
         } else {
-            Server::getInstance()->broadcastMessage("§cNot enough votes to skip the night.");
+            Server::getInstance()->broadcastMessage("§cVote failed! Night continues.");
         }
 
-        $this->bossBar->updateTitle("Vote ended.");
-        foreach ($this->votedPlayers as $name => $player) {
-            $this->bossBar->remove($player);
-        }
+        $this->isVoting = false;
+    }
+
+    public function isVoting(): bool {
+        return $this->isVoting;
     }
 }
