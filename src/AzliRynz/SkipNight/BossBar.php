@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AzliRynz\NightSkip;
+namespace AzliRynz\SkipNight;
 
 use pocketmine\network\mcpe\protocol\BossEventPacket;
 use pocketmine\network\mcpe\protocol\types\BossBarColor;
