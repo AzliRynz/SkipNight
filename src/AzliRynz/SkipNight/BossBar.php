@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace AzliRynz\SkipNight;
+namespace AzliRynz\NightSkip;
 
 use pocketmine\network\mcpe\protocol\BossEventPacket;
 use pocketmine\network\mcpe\protocol\types\BossBarColor;
@@ -25,8 +25,32 @@ class BossBar {
         if (isset($this->players[$player->getName()])) return;
         $this->players[$player->getName()] = $player;
 
-        $pk = BossEventPacket::show($this->entityUniqueId, $this->title, $this->progress, false, BossBarColor::BLUE, 0);
+        $pk = BossEventPacket::show(
+            $this->entityUniqueId,
+            $this->title,
+            $this->progress,
+            false,
+            BossBarColor::BLUE,
+            0
+        );
+
         $player->getNetworkSession()->sendDataPacket($pk);
+    }
+
+    public function updateProgress(float $progress): void {
+        $this->progress = $progress;
+        foreach ($this->players as $player) {
+            $pk = BossEventPacket::healthPercent($this->entityUniqueId, $this->progress);
+            $player->getNetworkSession()->sendDataPacket($pk);
+        }
+    }
+
+    public function updateTitle(string $title): void {
+        $this->title = $title;
+        foreach ($this->players as $player) {
+            $pk = BossEventPacket::title($this->entityUniqueId, $this->title);
+            $player->getNetworkSession()->sendDataPacket($pk);
+        }
     }
 
     public function remove(Player $player): void {
